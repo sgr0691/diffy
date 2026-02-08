@@ -1,1 +1,102 @@
-# diffy
+# Diffy
+
+Explain infrastructure diffs in plain English — fast.
+
+Diffy is a tiny OSS CLI that turns Terraform plan output into a human-readable summary with risk flags (replace/delete/public exposure/IAM changes), so reviewers can answer:
+
+> “What’s changing, and how risky is it?”
+
+No dashboards. No agent loops. No auto-remediation. Just clarity.
+
+---
+
+## MVP support (v0.1)
+
+- ✅ Terraform plan JSON (`terraform show -json plan.out`)
+- ✅ Markdown / text / JSON output
+- ✅ CI-friendly exit codes via `--fail-on`
+
+Planned next:
+- Helm diffs, Kubernetes manifests, Pulumi previews (not in v0.1)
+
+---
+
+## Install
+
+### Option A: Go install (dev)
+```bash
+go install github.com/<you>/diffy@latest
+```
+
+### Option B: Build from source
+```bash
+git clone https://github.com/<you>/diffy
+cd diffy
+go build -o diffy ./cmd/diffy
+```
+
+(Replace `<you>` once the repo is created.)
+
+---
+
+## Usage
+
+### 1) Explain a Terraform plan (recommended)
+```bash
+terraform plan -out=plan.out
+diffy explain --from-plan plan.out
+```
+
+### 2) Explain a plan JSON directly
+```bash
+terraform show -json plan.out > plan.json
+diffy explain plan.json
+```
+
+### Output formats
+```bash
+diffy explain plan.json --format md
+diffy explain plan.json --format text
+diffy explain plan.json --format json
+```
+
+### CI gating
+Fail the build if Diffy finds anything **high** or **critical**:
+```bash
+diffy explain plan.json --fail-on high
+```
+
+Exit codes:
+- `0` = no findings at or above the threshold
+- `2` = findings at or above the threshold
+- `1` = runtime error (bad input, terraform missing, parse failure)
+
+---
+
+## What Diffy flags (v0.1)
+
+- Replacements (`delete + create`) → usually **high**
+- Deletes → **high** (especially stateful resources)
+- Public exposure hints:
+  - security group ingress `0.0.0.0/0` or `::/0`
+  - internet-facing LB
+  - public IP association
+- IAM changes:
+  - attachments
+  - policy document changes (best-effort)
+
+Diffy is intentionally conservative and includes “why flagged” notes.
+
+---
+
+## Contributing
+
+PRs welcome. If you’re adding a rule:
+- add a sample plan JSON under `examples/`
+- add a golden test snapshot under `examples/expected/`
+
+---
+
+## License
+
+MIT
