@@ -1,0 +1,24 @@
+{
+  "resource_changes": [
+    {
+      "address": "aws_instance.web",
+      "type": "aws_instance",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {"tags": {"env": "staging"}},
+        "after": {"tags": {"env": "production"}}
+      }
+    },
+    {
+      "address": "aws_s3_bucket.assets",
+      "type": "aws_s3_bucket",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {"tags": {"team": "platform"}},
+        "after": {"tags": {"team": "platform", "cost-center": "1234"}}
+      }
+    }
+  ]
+}

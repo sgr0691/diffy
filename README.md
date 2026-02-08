@@ -25,17 +25,15 @@ Planned next:
 
 ### Option A: Go install (dev)
 ```bash
-go install github.com/<you>/diffy@latest
+go install github.com/sgr0691/diffy@latest
 ```
 
 ### Option B: Build from source
 ```bash
-git clone https://github.com/<you>/diffy
+git clone https://github.com/sgr0691/diffy
 cd diffy
-go build -o diffy ./cmd/diffy
+make build
 ```
-
-(Replace `<you>` once the repo is created.)
 
 ---
 
@@ -75,17 +73,29 @@ Exit codes:
 
 ## What Diffy flags (v0.1)
 
-- Replacements (`delete + create`) → usually **high**
-- Deletes → **high** (especially stateful resources)
-- Public exposure hints:
-  - security group ingress `0.0.0.0/0` or `::/0`
-  - internet-facing LB
-  - public IP association
-- IAM changes:
-  - attachments
-  - policy document changes (best-effort)
+- Replacements (`delete + create`) → **high** (or **critical** for stateful resources)
+- Deletes → **high** (or **critical** for stateful resources like RDS, S3, ElastiCache, EFS, EKS)
 
-Diffy is intentionally conservative and includes “why flagged” notes.
+Diffy is intentionally conservative and includes "why flagged" notes.
+
+---
+
+## Quick demo
+
+```bash
+# Build
+make build
+
+# Run against an example plan
+./diffy explain examples/plan/replace.json
+
+# Try different formats
+./diffy explain examples/plan/delete_stateful.json --format text
+./diffy explain examples/plan/benign_tags_only.json --format json
+
+# CI gating — exits 2 when findings meet threshold
+./diffy explain examples/plan/delete_stateful.json --fail-on high; echo "exit: $?"
+```
 
 ---
 
