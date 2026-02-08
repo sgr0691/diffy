@@ -1,0 +1,33 @@
+# Binaries
+/diffy
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build output
+/bin/
+/dist/
+
+# Test binary
+*.test
+
+# Go workspace
+go.work
+go.work.sum
+
+# Coverage
+coverage.out
+*.coverprofile
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
