@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
+	"sort"
+	"strconv"
 )
 
 // tfPlan is the subset of Terraform's JSON plan format we care about.
@@ -71,6 +74,7 @@ func parseJSON(data []byte) ([]ResourceChange, error) {
 			Action:       action,
 			Before:       rc.Change.Before,
 			After:        rc.Change.After,
+			ChangePaths:  computeChangePaths(rc.Change.Before, rc.Change.After),
 		})
 	}
 	return changes, nil
@@ -125,4 +129,88 @@ func ComputeCounts(changes []ResourceChange) Counts {
 	}
 	c.Total = c.Create + c.Update + c.Delete + c.Replace
 	return c
+}
+
+func computeChangePaths(beforeRaw, afterRaw json.RawMessage) []string {
+	var before any
+	var after any
+	if len(beforeRaw) > 0 {
+		_ = json.Unmarshal(beforeRaw, &before)
+	}
+	if len(afterRaw) > 0 {
+		_ = json.Unmarshal(afterRaw, &after)
+	}
+
+	var out []string
+	diffAny("", before, after, &out)
+	if len(out) == 0 {
+		return nil
+	}
+	sort.Strings(out)
+	deduped := out[:0]
+	for i, p := range out {
+		if i == 0 || out[i-1] != p {
+			deduped = append(deduped, p)
+		}
+	}
+	return deduped
+}
+
+func diffAny(path string, before, after any, out *[]string) {
+	if reflect.DeepEqual(before, after) {
+		return
+	}
+
+	beforeMap, beforeIsMap := before.(map[string]any)
+	afterMap, afterIsMap := after.(map[string]any)
+	if beforeIsMap && afterIsMap {
+		keys := make(map[string]struct{}, len(beforeMap)+len(afterMap))
+		for k := range beforeMap {
+			keys[k] = struct{}{}
+		}
+		for k := range afterMap {
+			keys[k] = struct{}{}
+		}
+
+		ordered := make([]string, 0, len(keys))
+		for k := range keys {
+			ordered = append(ordered, k)
+		}
+		sort.Strings(ordered)
+
+		for _, k := range ordered {
+			child := k
+			if path != "" {
+				child = path + "." + k
+			}
+			bv, bok := beforeMap[k]
+			av, aok := afterMap[k]
+			if !bok || !aok {
+				*out = append(*out, child)
+				continue
+			}
+			diffAny(child, bv, av, out)
+		}
+		return
+	}
+
+	beforeList, beforeIsList := before.([]any)
+	afterList, afterIsList := after.([]any)
+	if beforeIsList && afterIsList {
+		if len(beforeList) != len(afterList) {
+			if path != "" {
+				*out = append(*out, path)
+			}
+			return
+		}
+		for i := range beforeList {
+			child := path + "[" + strconv.Itoa(i) + "]"
+			diffAny(child, beforeList[i], afterList[i], out)
+		}
+		return
+	}
+
+	if path != "" {
+		*out = append(*out, path)
+	}
 }

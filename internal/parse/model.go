@@ -21,6 +21,7 @@ type ResourceChange struct {
 	Action       Action          `json:"action"`
 	Before       json.RawMessage `json:"before,omitempty"`
 	After        json.RawMessage `json:"after,omitempty"`
+	ChangePaths  []string        `json:"change_paths,omitempty"`
 }
 
 // Counts holds aggregate counts by action type.

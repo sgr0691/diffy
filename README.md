@@ -75,6 +75,17 @@ Exit codes:
 
 - Replacements (`delete + create`) → **high** (or **critical** for stateful resources)
 - Deletes → **high** (or **critical** for stateful resources like RDS, S3, ElastiCache, EFS, EKS)
+- Public exposure hints:
+  - SG ingress open to `0.0.0.0/0` or `::/0` on common ports
+  - internet-facing load balancers
+  - public IP association enabled
+- IAM changes:
+  - policy attachments
+  - policy document changes (best-effort path-based)
+- Medium/low heuristics:
+  - impactful stateful updates (storage/engine/encryption-class signals)
+  - network routing/gateway changes
+  - tag-only updates
 
 Diffy is intentionally conservative and includes "why flagged" notes.
 

@@ -86,6 +86,9 @@ func TestJSONRenderer(t *testing.T) {
 	if !strings.Contains(output, `"decision": "fail"`) {
 		t.Error("expected decision: fail in JSON output")
 	}
+	if !strings.Contains(output, `"changes": [`) {
+		t.Error("expected changes array in JSON output")
+	}
 	if !strings.Contains(output, `"severity": "high"`) {
 		t.Error("expected severity: high in JSON output")
 	}

@@ -11,22 +11,45 @@ import (
 type JSONRenderer struct{}
 
 type jsonOutput struct {
-	Counts    parse.Counts     `json:"counts"`
-	Findings  []jsonFinding    `json:"findings"`
-	Threshold *string          `json:"threshold,omitempty"`
-	Decision  string           `json:"decision"`
+	Counts    parse.Counts  `json:"counts"`
+	Changes   []jsonChange  `json:"changes"`
+	Findings  []jsonFinding `json:"findings"`
+	Threshold *string       `json:"threshold,omitempty"`
+	Decision  string        `json:"decision"`
+	ExitCode  int           `json:"exit_code"`
+}
+
+type jsonChange struct {
+	Address      string   `json:"address"`
+	Type         string   `json:"type"`
+	ProviderName string   `json:"provider_name,omitempty"`
+	Action       string   `json:"action"`
+	ChangePaths  []string `json:"change_paths,omitempty"`
 }
 
 type jsonFinding struct {
-	Severity     string `json:"severity"`
-	Title        string `json:"title"`
-	Description  string `json:"description"`
-	Address      string `json:"resource_address"`
-	Action       string `json:"action"`
-	ResourceType string `json:"resource_type"`
+	Severity     string   `json:"severity"`
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	Address      string   `json:"resource_address"`
+	Action       string   `json:"action"`
+	ResourceType string   `json:"resource_type"`
+	ChangePaths  []string `json:"change_paths,omitempty"`
+	Matches      []string `json:"matches,omitempty"`
 }
 
 func (j JSONRenderer) Render(r Result) string {
+	changes := make([]jsonChange, len(r.Changes))
+	for i, ch := range r.Changes {
+		changes[i] = jsonChange{
+			Address:      ch.Address,
+			Type:         ch.Type,
+			ProviderName: ch.ProviderName,
+			Action:       string(ch.Action),
+			ChangePaths:  ch.ChangePaths,
+		}
+	}
+
 	findings := make([]jsonFinding, len(r.Findings))
 	for i, f := range r.Findings {
 		findings[i] = jsonFinding{
@@ -36,6 +59,8 @@ func (j JSONRenderer) Render(r Result) string {
 			Address:      f.Address,
 			Action:       string(f.Evidence.Action),
 			ResourceType: f.Evidence.ResourceType,
+			ChangePaths:  f.Evidence.ChangePaths,
+			Matches:      f.Evidence.Matches,
 		}
 	}
 
@@ -46,8 +71,10 @@ func (j JSONRenderer) Render(r Result) string {
 
 	out := jsonOutput{
 		Counts:   r.Counts,
+		Changes:  changes,
 		Findings: findings,
 		Decision: decision,
+		ExitCode: r.ExitCode,
 	}
 
 	if r.Threshold != nil {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/sgr0691/diffy/internal/analyze"
+	"github.com/sgr0691/diffy/internal/parse"
 )
 
 // MarkdownRenderer renders output in Markdown format.
@@ -38,11 +39,13 @@ func (m MarkdownRenderer) Render(r Result) string {
 
 	// Top changes table
 	if len(r.Changes) > 0 {
+		summaries := summarizeChangeFindings(r.Changes, r.Findings)
 		sb.WriteString("## Changes\n\n")
-		sb.WriteString("| Action | Resource | Type |\n")
-		sb.WriteString("|--------|----------|------|\n")
+		sb.WriteString("| Action | Resource | Severity | Notes |\n")
+		sb.WriteString("|--------|----------|----------|-------|\n")
 		for _, ch := range r.Changes {
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s |\n", ch.Action, ch.Address, ch.Type))
+			summary := summaries[ch.Address]
+			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", ch.Action, ch.Address, summary.Severity, summary.Notes))
 		}
 		sb.WriteString("\n")
 	}
@@ -101,4 +104,43 @@ func groupBySeverity(findings []analyze.Finding) map[analyze.Severity][]analyze.
 		m[f.Severity] = append(m[f.Severity], f)
 	}
 	return m
+}
+
+type changeSummary struct {
+	Severity string
+	Notes    string
+}
+
+func summarizeChangeFindings(changes []parse.ResourceChange, findings []analyze.Finding) map[string]changeSummary {
+	out := make(map[string]changeSummary, len(changes))
+	for _, ch := range changes {
+		out[ch.Address] = changeSummary{
+			Severity: "-",
+			Notes:    ch.Type,
+		}
+	}
+
+	byAddress := make(map[string][]analyze.Finding)
+	for _, f := range findings {
+		byAddress[f.Address] = append(byAddress[f.Address], f)
+	}
+
+	for _, ch := range changes {
+		fs := byAddress[ch.Address]
+		if len(fs) == 0 {
+			continue
+		}
+		sort.Slice(fs, func(i, j int) bool {
+			if fs[i].Severity != fs[j].Severity {
+				return fs[i].Severity > fs[j].Severity
+			}
+			return fs[i].Title < fs[j].Title
+		})
+		out[ch.Address] = changeSummary{
+			Severity: strings.ToUpper(fs[0].Severity.String()),
+			Notes:    fs[0].Title,
+		}
+	}
+
+	return out
 }
